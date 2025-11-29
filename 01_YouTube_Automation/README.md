@@ -33,6 +33,9 @@ graph TD
     G --> H;
     H -->|Timeline Data| I["Video Renderer (Python/API)"];
     I --> J[YouTube Upload];
+```
+
+---
 
 ## ⚖️ Architecture Comparison
 
