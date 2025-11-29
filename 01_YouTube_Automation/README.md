@@ -1,3 +1,39 @@
+# 🎥 Automated Long-Form YouTube Agent
+
+> **A production-grade n8n architecture for generating 10-minute documentary-style videos on autopilot.**
+
+## 📖 Executive Summary
+Most "YouTube Automation" workflows rely on simple black-box tools that output generic, repetitive content. This module uses a **Component-Based Architecture** to mimic a real production studio. It treats the script, voice, and visuals as separate assembly lines, merging them programmatically for broadcast-quality results.
+
+**Key Features:**
+* **Scene-by-Scene Granularity:** The AI generates a structured storyboard, not just a block of text.
+* **Parallel Processing:** Generates audio and visuals simultaneously to reduce runtime.
+* **Asset Management:** Automatically manages file storage (S3 or Local) to prevent link rot.
+
+---
+
+## 🏗️ System Architecture
+
+### The "Assembly Line" Logic
+Unlike simple linear workflows, this agent uses a loop to process specific scenes, ensuring the image matches the exact sentence being spoken.
+
+```mermaid
+graph TD
+    A[Start / Scheduler] --> B{AI Brain (GPT-4o/Gemini)};
+    B -->|Generates JSON Storyboard| C[Scene Loop];
+    
+    subgraph "Parallel Production Factory"
+    C --> D[Track A: Audio Engine];
+    C --> E[Track B: Visual Engine];
+    D -->|Generate Voiceover| F[Save Audio Asset];
+    E -->|Generate Flux/SDXL Image| G[Save Image Asset];
+    end
+    
+    F --> H[Aggregator];
+    G --> H;
+    H -->|Timeline Data| I[Video Renderer (Python/API)];
+    I --> J[YouTube Upload];
+
 ## ⚖️ Architecture Comparison
 
 Choose the workflow that fits your budget and technical capability.
