@@ -1,0 +1,115 @@
+{
+  "name": "Pro Social Media Omni-Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "id": "scraper",
+      "name": "Fetch Page HTML",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-180, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple HTML stripper\nconst html = $input.first().json.data;\n// Remove scripts, styles, and tags\nconst text = html.replace(/<script[^>]*>([\\S\\s]*?)<\\/script>/gmi, '').replace(/<style[^>]*>([\\S\\s]*?)<\\/style>/gmi, '').replace(/<[^>]*>?/gm, '');\n// Limit text to 5000 chars to save tokens\nreturn { text: text.substring(0, 5000).trim() };"
+      },
+      "id": "cleaner",
+      "name": "Clean HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [40, 0]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a specialized Ghostwriter. Repurpose the provided text into 3 formats:\n1. LinkedIn Post (Professional, 3 paragraphs, 3 hashtags)\n2. Twitter Thread (Array of 5 tweets)\n3. Instagram Carousel Text (Array of 5 slides, short text)\n\nOutput strictly valid JSON: { \"linkedin\": \"...\", \"tweets\": [\"...\"], \"instagram_slides\": [\"...\"] }"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.text }}"
+            }
+          ]
+        }
+      },
+      "id": "gpt-brain",
+      "name": "Content Brain (GPT-4o)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [260, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = JSON.parse($input.first().json.message.content.replace(/```json/g, '').replace(/```/g, ''));\nreturn content;"
+      },
+      "id": "parser",
+      "name": "Parse JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "service": "buffer",
+        "profileId": "YOUR_BUFFER_LINKEDIN_ID",
+        "text": "={{ $json.linkedin }}"
+      },
+      "id": "buffer-linkedin",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.buffer",
+      "typeVersion": 1,
+      "position": [700, -120],
+      "credentials": {
+        "bufferApi": {
+          "id": "YOUR_BUFFER_ID",
+          "name": "Buffer account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "service": "buffer",
+        "profileId": "YOUR_BUFFER_TWITTER_ID",
+        "text": "={{ $json.tweets[0] }} (Thread functionality requires Pro Buffer, this posts first tweet)"
+      },
+      "id": "buffer-twitter",
+      "name": "Post to Twitter",
+      "type": "n8n-nodes-base.buffer",
+      "typeVersion": 1,
+      "position": [700, 120],
+      "credentials": {
+        "bufferApi": {
+          "id": "YOUR_BUFFER_ID",
+          "name": "Buffer account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Start": { "main": [[{ "node": "Fetch Page HTML", "type": "main", "index": 0 }]] },
+    "Fetch Page HTML": { "main": [[{ "node": "Clean HTML", "type": "main", "index": 0 }]] },
+    "Clean HTML": { "main": [[{ "node": "Content Brain (GPT-4o)", "type": "main", "index": 0 }]] },
+    "Content Brain (GPT-4o)": { "main": [[{ "node": "Parse JSON", "type": "main", "index": 0 }]] },
+    "Parse JSON": { "main": [[{ "node": "Post to LinkedIn", "type": "main", "index": 0 }, { "node": "Post to Twitter", "type": "main", "index": 0 }]] }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "name": "Local Social Media Omni-Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a Social Media Manager. Read the text provided. Output strictly valid JSON: { \"linkedin_post\": \"...\", \"twitter_thread\": [\"...\"], \"instagram_slides\": [\"Text for slide 1\", \"Text for slide 2\", \"Text for slide 3\"] }"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.text }}"
+            }
+          ]
+        }
+      },
+      "id": "gemini",
+      "name": "Gemini Brain",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "YOUR_GEMINI_ID",
+          "name": "Google Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.content.parts[0].text;\nconst clean = raw.replace(/```json/g, '').replace(/```/g, '');\nconst data = JSON.parse(clean);\n\n// Prepare args for Python\n// We join the slides with a special delimiter '|||' to pass as one string argument\nconst slideArg = data.instagram_slides.join('|||');\n\nreturn { ...data, slideArg };"
+      },
+      "id": "prepare-python",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "command": "python3 /home/node/.n8n/02_Social_Media_Agent/scripts/carousel_generator.py",
+        "arguments": "={{ $json.slideArg }}"
+      },
+      "id": "python-design",
+      "name": "Generate Carousel (Python)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "content": "## 🎨 The Python Designer\nThis node calls the local script.\nIt sends the text for the slides.\nThe script saves .jpg files to your assets folder."
+      },
+      "id": "note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [400, -100]
+    },
+    {
+      "parameters": {
+        "content": "={{ \"✅ **Generation Complete**\\n\\n**LinkedIn:**\\n\" + $json.linkedin_post + \"\\n\\n**Twitter:**\\n\" + $json.twitter_thread.join('\\n- ') + \"\\n\\n**Instagram Images:**\\nChecked local folder for slides!\" }}",
+        "webhookUrl": "YOUR_DISCORD_WEBHOOK_URL"
+      },
+      "id": "discord",
+      "name": "Notify Discord",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [660, 0]
+    }
+  ],
+  "connections": {
+    "Start": { "main": [[{ "node": "Gemini Brain", "type": "main", "index": 0 }]] },
+    "Gemini Brain": { "main": [[{ "node": "Prepare Data", "type": "main", "index": 0 }]] },
+    "Prepare Data": { "main": [[{ "node": "Generate Carousel (Python)", "type": "main", "index": 0 }]] },
+    "Generate Carousel (Python)": { "main": [[{ "node": "Notify Discord", "type": "main", "index": 0 }]] }
+  }
+}

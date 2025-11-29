@@ -21,7 +21,7 @@ We break down complex tasks (like video generation) into an assembly line of spe
 | Module ID | Agent Name | Primary Use Case | Architecture Types |
 | :--- | :--- | :--- | :--- |
 | **01** | **[YouTube Long-Form Agent](./01_YouTube_Automation/README.md)** | Generates 10-minute documentary-style videos with scene-by-scene coherence. | ✅ Cloud (API)<br>✅ Local (Python) |
-| **02** | **Social Media Omni-Agent** | *Coming Soon...* | - |
+| **02** | **[Social Media Omni-Agent](./02_Social_Media_Agent/README.md)** | Repurposes 1 URL into LinkedIn, X, and Instagram posts. | ✅ Cloud (Buffer)<br>✅ Local (Python/Pillow) |
 | **03** | **Lead Gen Scraper** | *Coming Soon...* | - |
 
 ---
