@@ -59,4 +59,4 @@ This is an open-source project. If you find a bug or want to add a "Local" alter
 5.  Open a Pull Request.
 
 ---
-*Maintained by [Your Name/Username]*
+*Maintained by Solih Ahmad Sohan*
