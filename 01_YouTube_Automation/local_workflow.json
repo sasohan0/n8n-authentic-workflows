@@ -1,0 +1,251 @@
+{
+  "name": "Local YouTube Automation Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-380, 0]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Output a JSON array of 3 scenes about 'Nature'. Format: [{\"text\": \"...\", \"image_prompt\": \"...\"}]"
+            },
+            {
+              "role": "user",
+              "content": "Generate script."
+            }
+          ]
+        }
+      },
+      "id": "gemini-script",
+      "name": "Gemini Script",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [-160, 0],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "YOUR_GEMINI_ID",
+          "name": "Google Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return JSON.parse($input.first().json.content.parts[0].text.replace(/```json/g, '').replace(/```/g, ''));"
+      },
+      "id": "parse-json",
+      "name": "Parse JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [60, 0]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop",
+      "name": "Loop Scenes",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HF_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inputs",
+              "value": "={{ $json.image_prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "hf-gen",
+      "name": "HF Image Gen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, -100]
+    },
+    {
+      "parameters": {
+        "fileName": "={{ '/home/node/.n8n/assets/image_' + $node[\"Loop Scenes\"].context[\"currentRunIndex\"] + '.jpg' }}",
+        "dataPropertyName": "data"
+      },
+      "id": "save-img",
+      "name": "Save Image",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [720, -100]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "prompt": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "={{ 'Speak: ' + $json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gemini-voice",
+      "name": "Gemini Voice",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [500, 100]
+    },
+    {
+      "parameters": {
+        "fileName": "={{ '/home/node/.n8n/assets/audio_' + $node[\"Loop Scenes\"].context[\"currentRunIndex\"] + '.mp3' }}",
+        "dataPropertyName": "data"
+      },
+      "id": "save-audio",
+      "name": "Save Audio",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [720, 100]
+    },
+    {
+      "parameters": {
+        "command": "python3 /home/node/.n8n/scripts/video_editor.py"
+      },
+      "id": "render-video",
+      "name": "Render Video (Python)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1000, 0]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Gemini Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Script": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON": {
+      "main": [
+        [
+          {
+            "node": "Loop Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Scenes": {
+      "main": [
+        [
+          {
+            "node": "HF Image Gen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gemini Voice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Render Video (Python)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HF Image Gen": {
+      "main": [
+        [
+          {
+            "node": "Save Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Voice": {
+      "main": [
+        [
+          {
+            "node": "Save Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Image": {
+      "main": [
+        [
+          {
+            "node": "Loop Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Audio": {
+      "main": [
+        [
+          {
+            "node": "Loop Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

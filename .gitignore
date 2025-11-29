@@ -1,0 +1,20 @@
+# .gitignore
+
+# 1. System Files
+.DS_Store
+Thumbs.db
+
+# 2. Python Junk
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# 3. n8n / Node
+node_modules/
+.npm/
+
+# 4. n8n Assets (Don't upload generated videos/images)
+01_YouTube_Automation/assets/*
+!01_YouTube_Automation/assets/.gitkeep
