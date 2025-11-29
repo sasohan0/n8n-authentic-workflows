@@ -19,7 +19,7 @@ Unlike simple linear workflows, this agent uses a loop to process specific scene
 
 ```mermaid
 graph TD
-    A[Start / Scheduler] --> B{AI Brain (GPT-4o/Gemini)};
+    A[Start / Scheduler] --> B{"AI Brain (GPT-4o/Gemini)"};
     B -->|Generates JSON Storyboard| C[Scene Loop];
     
     subgraph "Parallel Production Factory"
@@ -31,7 +31,7 @@ graph TD
     
     F --> H[Aggregator];
     G --> H;
-    H -->|Timeline Data| I[Video Renderer (Python/API)];
+    H -->|Timeline Data| I["Video Renderer (Python/API)"];
     I --> J[YouTube Upload];
 
 ## ⚖️ Architecture Comparison
