@@ -1,0 +1,150 @@
+{
+  "name": "Local Lead Gen Scraper",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.domain }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "scrape-home",
+      "name": "Scrape Homepage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-180, 0]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a web crawler. Analyze the HTML content. Find the best relative URL or Path for the 'Team', 'About Us', or 'People' page. Output strictly JSON: {\"team_path\": \"/about\"}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.data.substring(0, 20000) }}"
+            }
+          ]
+        }
+      },
+      "id": "gemini-nav",
+      "name": "Gemini Navigator",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [40, 0],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "YOUR_GEMINI_ID",
+          "name": "Google Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fix Relative URLs\nconst path = JSON.parse($input.first().json.content.parts[0].text.replace(/```json/g, '').replace(/```/g, '')).team_path;\nlet domain = $('Start').first().json.domain;\n\n// Remove trailing slash from domain\nif (domain.endsWith('/')) domain = domain.slice(0, -1);\n\n// Handle absolute vs relative paths\nconst fullUrl = path.startsWith('http') ? path : domain + path;\n\nreturn { team_url: fullUrl };"
+      },
+      "id": "url-parser",
+      "name": "Construct URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.team_url }}",
+        "options": {}
+      },
+      "id": "scrape-team",
+      "name": "Scrape Team Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Extract a list of employees. Return a JSON array: [ { \"first\": \"...\", \"last\": \"...\" } ]"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.data.substring(0, 30000) }}"
+            }
+          ]
+        }
+      },
+      "id": "gemini-extract",
+      "name": "Gemini Extractor",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [700, 0],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "YOUR_GEMINI_ID",
+          "name": "Google Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.content.parts[0].text.replace(/```json/g, '').replace(/```/g, '');\nreturn JSON.parse(text);"
+      },
+      "id": "parse-names",
+      "name": "Parse Names",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 0]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-loop",
+      "name": "Process Employees",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1140, 0]
+    },
+    {
+      "parameters": {
+        "command": "python3 /home/node/.n8n/03_Lead_Gen_Scraper/scripts/email_permutator.py",
+        "arguments": "={{ $json.first }} {{ $json.last }} {{ $('Start').first().json.domain }}"
+      },
+      "id": "python-email",
+      "name": "Permutator Engine",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1360, 0]
+    }
+  ],
+  "connections": {
+    "Start": { "main": [[{ "node": "Scrape Homepage", "type": "main", "index": 0 }]] },
+    "Scrape Homepage": { "main": [[{ "node": "Gemini Navigator", "type": "main", "index": 0 }]] },
+    "Gemini Navigator": { "main": [[{ "node": "Construct URL", "type": "main", "index": 0 }]] },
+    "Construct URL": { "main": [[{ "node": "Scrape Team Page", "type": "main", "index": 0 }]] },
+    "Scrape Team Page": { "main": [[{ "node": "Gemini Extractor", "type": "main", "index": 0 }]] },
+    "Gemini Extractor": { "main": [[{ "node": "Parse Names", "type": "main", "index": 0 }]] },
+    "Parse Names": { "main": [[{ "node": "Process Employees", "type": "main", "index": 0 }]] },
+    "Process Employees": { "main": [[{ "node": "Permutator Engine", "type": "main", "index": 0 }]] },
+    "Permutator Engine": { "main": [[{ "node": "Process Employees", "type": "main", "index": 0 }]] }
+  }
+}

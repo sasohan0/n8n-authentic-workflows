@@ -1,0 +1,187 @@
+{
+  "name": "Pro Lead Gen Scraper",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://api.zenrows.com/v1/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_ZENROWS_KEY"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.domain }}"
+            },
+            {
+              "name": "js_render",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "scraper-home",
+      "name": "Scrape Homepage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-180, 0]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Analyze the HTML links provided. Identify the single best URL for finding a list of employees (e.g., 'Team', 'About Us', 'People'). Return strictly JSON: { \"team_page_url\": \"...\" }. If none found, return the original domain."
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.data.substring(0, 10000) }}"
+            }
+          ]
+        }
+      },
+      "id": "gpt-nav",
+      "name": "AI Navigator",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [40, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return JSON.parse($input.first().json.message.content.replace(/```json/g, '').replace(/```/g, ''));"
+      },
+      "id": "parse-url",
+      "name": "Parse URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://api.zenrows.com/v1/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_ZENROWS_KEY"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.team_page_url }}"
+            },
+            {
+              "name": "js_render",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "scraper-team",
+      "name": "Scrape Team Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Extract a list of employees. Return a JSON array: [ { \"first_name\": \"...\", \"last_name\": \"...\", \"title\": \"...\" } ]"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.data.substring(0, 15000) }}"
+            }
+          ]
+        }
+      },
+      "id": "gpt-extract",
+      "name": "AI Name Extractor",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [700, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "employees",
+        "options": {}
+      },
+      "id": "split-employees",
+      "name": "Split Employees",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hunter.io/v2/email-finder",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "domain",
+              "value": "={{ $('Start').first().json.domain }}"
+            },
+            {
+              "name": "first_name",
+              "value": "={{ $json.first_name }}"
+            },
+            {
+              "name": "last_name",
+              "value": "={{ $json.last_name }}"
+            },
+            {
+              "name": "api_key",
+              "value": "YOUR_HUNTER_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "hunter-enrich",
+      "name": "Hunter.io Enrichment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1140, 0]
+    }
+  ],
+  "connections": {
+    "Start": { "main": [[{ "node": "Scrape Homepage", "type": "main", "index": 0 }]] },
+    "Scrape Homepage": { "main": [[{ "node": "AI Navigator", "type": "main", "index": 0 }]] },
+    "AI Navigator": { "main": [[{ "node": "Parse URL", "type": "main", "index": 0 }]] },
+    "Parse URL": { "main": [[{ "node": "Scrape Team Page", "type": "main", "index": 0 }]] },
+    "Scrape Team Page": { "main": [[{ "node": "AI Name Extractor", "type": "main", "index": 0 }]] },
+    "AI Name Extractor": { "main": [[{ "node": "Split Employees", "type": "main", "index": 0 }]] },
+    "Split Employees": { "main": [[{ "node": "Hunter.io Enrichment", "type": "main", "index": 0 }]] }
+  }
+}
