@@ -1,0 +1,132 @@
+{
+  "name": "Pro AI Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract Clean Error Details\nconst errorData = $input.first().json;\n\n// Construct the Deep Link to the failed workflow execution\n// IMPORTANT: Change 'YOUR_N8N_URL' to your actual n8n instance URL (e.g., https://n8n.mycompany.com)\nconst baseUrl = 'YOUR_N8N_URL';\nconst executionUrl = `${baseUrl}/workflow/${errorData.workflow.id}/executions/${errorData.executionId}`;\n\nreturn {\n  workflow_name: errorData.workflow.name,\n  node_name: errorData.execution.lastNodeExecuted,\n  error_message: errorData.execution.error.message,\n  stack_trace: errorData.execution.error.stack,\n  execution_url: executionUrl,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "clean-data",
+      "name": "Format Error Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-180, 0]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a Senior DevOps Engineer. Analyze the n8n error log below. \n1. Explain the ROOT CAUSE in one simple sentence.\n2. Suggest a specific FIX.\n3. Output JSON: { \"cause\": \"...\", \"fix\": \"...\" }"
+            },
+            {
+              "role": "user",
+              "content": "={{ 'Workflow: ' + $json.workflow_name + '\\nNode: ' + $json.node_name + '\\nError: ' + $json.error_message + '\\nStack: ' + $json.stack_trace }}"
+            }
+          ]
+        }
+      },
+      "id": "gpt-diagnosis",
+      "name": "AI Diagnostician",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [40, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const diagnosis = JSON.parse($input.first().json.message.content.replace(/```json/g, '').replace(/```/g, ''));\nreturn { ...diagnosis, ...$('Format Error Data').first().json };"
+      },
+      "id": "parse-ai",
+      "name": "Parse Diagnosis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "channelId": "YOUR_SLACK_CHANNEL_ID",
+        "jsonParameters": true,
+        "blocksUi": {
+          "blocks": [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": "🚨 Workflow Crash Detected",
+                "emoji": true
+              }
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text": "*Workflow:*\n{{ $json.workflow_name }}"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Failing Node:*\n{{ $json.node_name }}"
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*AI Diagnosis:*\n{{ $json.cause }}\n\n*Suggested Fix:*\n{{ $json.fix }}"
+              }
+            },
+            {
+              "type": "actions",
+              "elements": [
+                {
+                  "type": "button",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🛠️ Fix Workflow",
+                    "emoji": true
+                  },
+                  "url": "{{ $json.execution_url }}",
+                  "style": "danger"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "id": "slack-alert",
+      "name": "Slack Alert (Block Kit)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [480, 0],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "YOUR_SLACK_ID",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": { "main": [[{ "node": "Format Error Data", "type": "main", "index": 0 }]] },
+    "Format Error Data": { "main": [[{ "node": "AI Diagnostician", "type": "main", "index": 0 }]] },
+    "AI Diagnostician": { "main": [[{ "node": "Parse Diagnosis", "type": "main", "index": 0 }]] },
+    "Parse Diagnosis": { "main": [[{ "node": "Slack Alert (Block Kit)", "type": "main", "index": 0 }]] }
+  }
+}

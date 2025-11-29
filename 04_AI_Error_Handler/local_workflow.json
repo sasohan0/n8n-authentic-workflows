@@ -1,0 +1,90 @@
+{
+  "name": "Local AI Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Data for Python\n// We pass the full error object to Python to clean it up\nreturn { error_json: JSON.stringify($input.first().json) };"
+      },
+      "id": "prepare-data",
+      "name": "Prepare JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-180, 0]
+    },
+    {
+      "parameters": {
+        "command": "python3 /home/node/.n8n/04_AI_Error_Handler/scripts/log_parser.py",
+        "arguments": "={{ $json.error_json }}"
+      },
+      "id": "python-parser",
+      "name": "Python Log Cleaner",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [40, 0]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a DevOps assistant. Diagnose this n8n error. \n1. Root Cause (1 sentence).\n2. Fix (1 sentence).\nOutput JSON: { \"cause\": \"...\", \"fix\": \"...\" }"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.cleaned_log }}"
+            }
+          ]
+        }
+      },
+      "id": "gemini-brain",
+      "name": "Gemini Diagnostician",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [260, 0],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "YOUR_GEMINI_ID",
+          "name": "Google Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai = JSON.parse($input.first().json.content.parts[0].text.replace(/```json/g, '').replace(/```/g, ''));\nconst meta = $('Python Log Cleaner').first().json;\nreturn { ...ai, ...meta };"
+      },
+      "id": "parse-ai",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "content": "={{ \"🚨 **Workflow Crash: \" + $json.workflow_name + \"**\\n\\n🔴 **Node:** \" + $json.node_name + \"\\n💥 **Error:** \" + $json.error_message + \"\\n\\n🤖 **AI Diagnosis:**\\n\" + $json.cause + \"\\n\\n🛠️ **Suggested Fix:**\\n\" + $json.fix }}",
+        "webhookUrl": "YOUR_DISCORD_WEBHOOK_URL"
+      },
+      "id": "discord-alert",
+      "name": "Discord Alert",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [700, 0]
+    }
+  ],
+  "connections": {
+    "Error Trigger": { "main": [[{ "node": "Prepare JSON", "type": "main", "index": 0 }]] },
+    "Prepare JSON": { "main": [[{ "node": "Python Log Cleaner", "type": "main", "index": 0 }]] },
+    "Python Log Cleaner": { "main": [[{ "node": "Gemini Diagnostician", "type": "main", "index": 0 }]] },
+    "Gemini Diagnostician": { "main": [[{ "node": "Parse Response", "type": "main", "index": 0 }]] },
+    "Parse Response": { "main": [[{ "node": "Discord Alert", "type": "main", "index": 0 }]] }
+  }
+}
