@@ -1,29 +1,34 @@
-# 🤖 Authentic n8n AI Automation Workflows
+# 🤖 n8n AI Automation Suite: Professional Agentic Workflows
 
-![n8n Version](https://img.shields.io/badge/n8n-1.0%2B-orange?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square) ![Status](https://img.shields.io/badge/status-Active-green?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Active-success) ![n8n](https://img.shields.io/badge/n8n-Automation-ff6e5c) ![Python](https://img.shields.io/badge/Python-3.10-blue) ![License](https://img.shields.io/badge/License-MIT-green)
 
-> **Professional-grade automation architectures for AI Engineers.** > This repository contains structured, production-ready workflows for n8n, separated into "Pro" (Cloud API) and "Local" (Zero-Cost) architectures.
+**Enterprise-grade automation architectures for AI Engineers, Agencies, and Freelancers.**
+
+> **The Problem:** Most automation tutorials use "Black Box" tools that don't scale.
+> **Our Solution:** This repository provides "Glass Box" workflows using **n8n**. We break complex tasks (like video generation) into an assembly line of specialized AI agents. You own the code, the API keys, and the data.
 
 ---
 
-## 🎯 Philosophy: "Authentic" Automation
-Most AI automation tutorials rely on "Black Box" all-in-one tools. This repository focuses on **Component-Based Architecture**. 
+## 📂 Production-Ready Modules
 
-We break down complex tasks (like video generation) into an assembly line of specialized AI agents. This approach ensures:
+Choose your architecture: **Pro** (Cloud APIs for speed) or **Local** (Python/Ollama for privacy and zero cost).
+
+| ID | Agent/Module Name | Business Use Case (ROI) | Architecture |
+| :--- | :--- | :--- | :--- |
+| **01** | **YouTube Documentary Generator** | **Content Automation:** Generates 10-minute, scene-by-scene documentary videos from a single prompt. | ✅ Cloud (API)<br>✅ Local (Python) |
+| **02** | **Omni-Channel Social Agent** | **Marketing:** Repurposes 1 Blog/Video URL into formatted LinkedIn, X, and Instagram posts automatically. | ✅ Cloud (Buffer)<br>✅ Local (Pillow) |
+| **03** | **B2B Lead Scraper & Enricher** | **Sales:** Crawls Team Pages, permutes emails, and verifies leads for outreach campaigns. | ✅ Cloud (Hunter)<br>✅ Local (Python DNS) |
+| **04** | **Self-Healing Error Handler** | **DevOps:** Diagnoses workflow crashes and auto-fixes or alerts via Slack/Discord. | ✅ Cloud (Slack)<br>✅ Local (Discord) |
+
+---
+
+## 🎯 The "Authentic" Philosophy
+*Why this repository is different:*
+
+We reject "wrapper" tools. We focus on **Component-Based Architecture**.
 * **Granular Control:** You own every step of the process.
 * **Scalability:** Swap out models (e.g., GPT-4o to Claude 3.5) without breaking the system.
-* **Cost Efficiency:** Choose between high-performance APIs or local compute power.
-
----
-
-## 📂 Module Directory
-
-| Module ID | Agent Name | Primary Use Case | Architecture Types |
-| :--- | :--- | :--- | :--- |
-| **01** | **[YouTube Long-Form Agent](./01_YouTube_Automation/README.md)** | Generates 10-minute documentary-style videos with scene-by-scene coherence. | ✅ Cloud (API)<br>✅ Local (Python) |
-| **02** | **[Social Media Omni-Agent](./02_Social_Media_Agent/README.md)** | Repurposes 1 URL into LinkedIn, X, and Instagram posts. | ✅ Cloud (Buffer)<br>✅ Local (Python/Pillow) |
-| **03** | **[Lead Gen Scraper](./03_Lead_Gen_Scraper/README.md)** | Intelligent Team Page crawler & Email Permutator. | ✅ Cloud (Hunter)<br>✅ Local (Python DNS) |
-| **04** | **[AI Error Handler](./04_AI_Error_Handler/README.md)** | Self-healing system that diagnoses crashes via Slack/Discord. | ✅ Cloud (Slack)<br>✅ Local (Discord) |
+* **Cost Efficiency:** Toggle between high-performance APIs or local compute power based on client budget.
 
 ---
 
@@ -32,32 +37,32 @@ We break down complex tasks (like video generation) into an assembly line of spe
 ### Prerequisites
 To use these workflows, you need an instance of **n8n**.
 1.  **Cloud:** [n8n.io](https://n8n.io) (Easiest for Pro Workflows).
-2.  **Self-Hosted:** Docker or [Pinokio](https://pinokio.computer/) (Required for Local/Python Workflows).
+2.  **Self-Hosted:** Docker or Pinokio (Required for Local/Python Workflows).
 
-### Usage Guide
+### Installation Guide
 1.  Navigate to the specific **Module Folder** (linked in the table above).
-2.  Read the module's `README.md` for specific API requirements.
+2.  **Read the module's `README.md`** for specific API requirements (OpenAI, Anthropic, etc.).
 3.  Download the `.json` workflow file.
-4.  **Import to n8n:** Open n8n Editor → Top Right Menu → Import from File.
+4.  **Import to n8n:** Open n8n Editor → Top Right Menu → *Import from File*.
 
 ---
 
 ## 🛠️ Tech Stack
-* **Orchestration:** [n8n](https://n8n.io/)
-* **LLMs:** OpenAI (GPT-4o), Google Gemini 1.5 Flash
+
+* **Orchestration:** n8n
+* **LLMs:** OpenAI (GPT-4o), Google Gemini 1.5 Flash, Ollama (Llama 3)
 * **Vision:** Replicate (Flux.1), Hugging Face (SDXL)
 * **Audio:** ElevenLabs, OpenAI TTS
 * **Compute:** Python 3.10 (MoviePy, Pandas)
 
 ---
 
-## 🤝 Contribution
+## 🤝 Contribution & Freelance
+**Maintained by [Solih Ahmad Sohan](https://www.linkedin.com/in/solih-ahmad-sohan)**
+
 This is an open-source project. If you find a bug or want to add a "Local" alternative to a "Pro" workflow:
 1.  Fork the repo.
 2.  Create a branch: `git checkout -b feature/amazing-feature`.
-3.  Commit changes: `git commit -m 'Add amazing feature'`.
-4.  Push to branch: `git push origin feature/amazing-feature`.
-5.  Open a Pull Request.
+3.  Open a Pull Request.
 
----
-*Maintained by Solih Ahmad Sohan*
+*Looking for a custom automation for your agency? [Connect with me on LinkedIn](https://www.linkedin.com/in/solih-ahmad-sohan).*
