@@ -1,0 +1,206 @@
+{
+  "name": "Lead_Enrichment_Clay_Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-node",
+      "name": "When clicking \"Execute Workflow\"",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "domain",
+              "value": "openai.com"
+            },
+            {
+              "name": "contact_name",
+              "value": "Sam Altman"
+            }
+          ]
+        }
+      },
+      "id": "mock-input",
+      "name": "Input: Target Domain",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "notes": "Simulates the input from a CSV or Google Sheet"
+    },
+    {
+      "parameters": {
+        "url": "https://api.clay.com/v3/enrich",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "domain",
+              "value": "={{ $json.domain }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "clay-api",
+      "name": "Clay Enrichment API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        900,
+        300
+      ],
+      "notes": "Fetching 'Tech Stack' and 'Latest News' data"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert SDR.\n\nContext on Lead:\nName: {{ $json.contact_name }}\nCompany: {{ $json.domain }}\nTech Stack: {{ $json.tech_stack }}\nRecent News: {{ $json.news_summary }}\n\nTask:\nWrite a hyper-personalized cold email (under 75 words). \nDo NOT use generic openers like \"I hope you are well\".\nReference their specific tech stack to make a point about our AI services."
+            }
+          ]
+        }
+      },
+      "id": "openai-drafter",
+      "name": "AI Email Drafter",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Lead_Gen_Output"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_draft",
+              "displayName": "email_draft",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1340,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking \"Execute Workflow\"": {
+      "main": [
+        [
+          {
+            "node": "Input: Target Domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input: Target Domain": {
+      "main": [
+        [
+          {
+            "node": "Clay Enrichment API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clay Enrichment API": {
+      "main": [
+        [
+          {
+            "node": "AI Email Drafter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Email Drafter": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
