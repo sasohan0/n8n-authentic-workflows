@@ -1,5 +1,5 @@
 {
-  "name": "Lead_Enrichment_Clay_Agent",
+  "name": "Lead_Enrichment_Clay_Agent_v3_Final",
   "nodes": [
     {
       "parameters": {},
@@ -8,8 +8,8 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        460,
-        300
+        260,
+        460
       ]
     },
     {
@@ -23,19 +23,23 @@
             {
               "name": "contact_name",
               "value": "Sam Altman"
+            },
+            {
+              "name": "tech_stack",
+              "value": "Python"
             }
           ]
         }
       },
       "id": "mock-input",
-      "name": "Input: Target Domain",
+      "name": "Mock Input (CSV)",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        680,
-        300
+        480,
+        460
       ],
-      "notes": "Simulates the input from a CSV or Google Sheet"
+      "notes": "Simulates data from Sheets/Airtable"
     },
     {
       "parameters": {
@@ -68,10 +72,78 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        900,
-        300
+        700,
+        460
       ],
-      "notes": "Fetching 'Tech Stack' and 'Latest News' data"
+      "notes": "Fetches Waterfall Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.domain }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-found",
+      "name": "Data Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "error",
+              "value": "Lead not found in Clay"
+            }
+          ]
+        }
+      },
+      "id": "error-log",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        700
+      ],
+      "notes": "Alerts Slack/Teams"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.tech_stack }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "Python",
+              "output": 0
+            },
+            {
+              "value2": "No-Code",
+              "output": 1
+            }
+          ]
+        },
+        "fallbackOutput": 2
+      },
+      "id": "router",
+      "name": "Tech Stack Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        340
+      ]
     },
     {
       "parameters": {
@@ -84,18 +156,80 @@
         "messages": {
           "values": [
             {
-              "content": "=You are an expert SDR.\n\nContext on Lead:\nName: {{ $json.contact_name }}\nCompany: {{ $json.domain }}\nTech Stack: {{ $json.tech_stack }}\nRecent News: {{ $json.news_summary }}\n\nTask:\nWrite a hyper-personalized cold email (under 75 words). \nDo NOT use generic openers like \"I hope you are well\".\nReference their specific tech stack to make a point about our AI services."
+              "content": "Write a technical email about our Python SDK."
             }
           ]
         }
       },
-      "id": "openai-drafter",
-      "name": "AI Email Drafter",
+      "id": "ai-python",
+      "name": "AI Drafter (Python)",
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
       "position": [
-        1120,
-        300
+        1620,
+        180
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Write an email about our No-Code integrations."
+            }
+          ]
+        }
+      },
+      "id": "ai-nocode",
+      "name": "AI Drafter (No-Code)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        1620,
+        340
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Write a generic value proposition email."
+            }
+          ]
+        }
+      },
+      "id": "ai-generic",
+      "name": "AI Drafter (Generic)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        1620,
+        500
       ],
       "credentials": {
         "openAiApi": {
@@ -109,7 +243,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "YOUR_SHEET_ID",
+          "value": "sheet_id",
           "mode": "list",
           "cachedResultName": "Lead_Gen_Output"
         },
@@ -118,41 +252,15 @@
           "value": "Sheet1",
           "mode": "list",
           "cachedResultName": "Sheet1"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "domain",
-              "displayName": "domain",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "email_draft",
-              "displayName": "email_draft",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            }
-          ]
-        },
-        "options": {}
+        }
       },
-      "id": "save-to-sheets",
+      "id": "save-sheets",
       "name": "Save to Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [
-        1340,
-        300
+        1900,
+        340
       ]
     }
   ],
@@ -162,14 +270,14 @@
       "main": [
         [
           {
-            "node": "Input: Target Domain",
+            "node": "Mock Input (CSV)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Input: Target Domain": {
+    "Mock Input (CSV)": {
       "main": [
         [
           {
@@ -184,14 +292,79 @@
       "main": [
         [
           {
-            "node": "AI Email Drafter",
+            "node": "Data Found?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI Email Drafter": {
+    "Data Found?": {
+      "main": [
+        [
+          {
+            "node": "Tech Stack Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tech Stack Router": {
+      "main": [
+        [
+          {
+            "node": "AI Drafter (Python)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Drafter (No-Code)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Drafter (Generic)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Drafter (Python)": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Drafter (No-Code)": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Drafter (Generic)": {
       "main": [
         [
           {
@@ -202,5 +375,43 @@
         ]
       ]
     }
-  }
+  },
+  "stickies": [
+    {
+      "parameters": {
+        "color": 2,
+        "height": 260,
+        "width": 680
+      },
+      "position": [
+        200,
+        360
+      ],
+      "name": "Phase 1: Data Ingestion"
+    },
+    {
+      "parameters": {
+        "color": 4,
+        "height": 520,
+        "width": 840
+      },
+      "position": [
+        1000,
+        140
+      ],
+      "name": "Phase 2: Intelligence & Logic"
+    },
+    {
+      "parameters": {
+        "color": 5,
+        "height": 260,
+        "width": 320
+      },
+      "position": [
+        1860,
+        240
+      ],
+      "name": "Phase 3: Output"
+    }
+  ]
 }
